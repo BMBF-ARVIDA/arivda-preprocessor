@@ -1,0 +1,6 @@
+{% extends "layout.html" %}
+{% block body %}
+  {% if error %}<p class="error"><strong>Error:</strong> {{ error }}{% endif %}
+
+<a href="{{ url_for('create_task_html') }}">Create task</a>
+{% endblock %}

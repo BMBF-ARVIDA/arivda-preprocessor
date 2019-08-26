@@ -1,0 +1,81 @@
+FROM dmrub/arvidapp
+
+# grab tini for signal processing and zombie killing
+ENV TINI_VERSION v0.18.0
+RUN set -eux; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    apt-get update; \
+#    apt-get install -y --no-install-recommends wget ca-certificates ; \
+# save list of currently installed packages for later so we can clean up
+    savedAptMark="$(apt-mark showmanual)"; \
+    fetchDeps="wget ca-certificates gpg dirmngr"; \
+    apt-get install -y --no-install-recommends $fetchDeps; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    \
+    wget -O /usr/local/bin/tini "https://github.com/krallin/tini/releases/download/$TINI_VERSION/tini"; \
+    wget -O /usr/local/bin/tini.asc "https://github.com/krallin/tini/releases/download/$TINI_VERSION/tini.asc"; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    for server in $(shuf -e ha.pool.sks-keyservers.net \
+                                hkp://p80.pool.sks-keyservers.net:80 \
+                                keyserver.ubuntu.com \
+                                hkp://keyserver.ubuntu.com:80 \
+                                pgp.mit.edu) ; do \
+        gpg --no-tty --keyserver "$server" --recv-keys 6380DC428747F6C393FEACA59A84159D7001A4E5 && break || : ; \
+    done; \
+    gpg --batch --verify /usr/local/bin/tini.asc /usr/local/bin/tini; \
+    { command -v gpgconf > /dev/null && gpgconf --kill all || :; }; \
+    rm -rf "$GNUPGHOME" /usr/local/bin/tini.asc; \
+    chmod +x /usr/local/bin/tini; \
+    tini -h; \
+    \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
+    find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { print $(NF-1) }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $fetchDeps;
+
+WORKDIR /usr/src/arvidapp
+
+# Install requirements for Web server
+COPY web-requirements.txt ./
+
+RUN set -eux; \
+    export DEBIAN_FRONTEND=noninteractive; \
+    apt-get update; \
+# save list of currently installed packages for later so we can clean up
+    savedAptMark="$(apt-mark showmanual)"; \
+    fetchDeps="python-pip python-setuptools"; \
+    apt-get install -y --no-install-recommends $fetchDeps; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    \
+    pip install -r web-requirements.txt; \
+    rm -rf ~/.cache/pip; \
+    \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+    apt-mark auto '.*' > /dev/null; \
+    [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; \
+    find /usr/local -type f -executable -exec ldd '{}' ';' \
+		| awk '/=>/ { print $(NF-1) }' \
+		| sort -u \
+		| xargs -r dpkg-query --search \
+		| cut -d: -f1 \
+		| sort -u \
+		| xargs -r apt-mark manual \
+	; \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $fetchDeps;
+
+COPY arvidapp_web ./arvidapp_web
+COPY arvidapp_web_server.py ./
+
+RUN chmod +x arvidapp_web_server.py
+
+ENTRYPOINT ["tini", "--", "/usr/src/arvidapp/arvidapp_web_server.py"]

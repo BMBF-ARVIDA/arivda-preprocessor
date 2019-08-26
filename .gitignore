@@ -3,6 +3,7 @@ arvidapp.cfg
 /clang
 /.idea
 /.vscode
+/instance
 
 # Backup files
 *~

@@ -1,0 +1,170 @@
+{% extends "layout.html" %}
+{% block style %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='jstree/themes/default/style.min.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='prism/prism.css') }}">
+<style>
+    html, body { background:#ebebeb; font-size:15px; font-family:Verdana; margin:0; padding:0; }
+    #container { min-width:320px; margin:0px auto 0 auto; background:white; border-radius:0px; padding:0px;
+    overflow:hidden; }
+    #tree { float:left; min-width:300px; border-right:1px solid silver; overflow:auto; padding:0px 0; }
+    #data { margin-left:320px; }
+    #data textarea { margin:0; padding:0; height:100%; width:100%; border:0; background:white; display:block;
+    line-height:18px; resize:none; }
+    #data, #code { overflow: scroll; overflow-wrap: normal; font: normal normal normal 12px/18px 'Consolas', monospace
+    !important; }
+
+    #tree .folder { background:url('./file_sprite.png') right bottom no-repeat; }
+    #tree .file { background:url('./file_sprite.png') 0 0 no-repeat; }
+    #tree .file-pdf { background-position: -32px 0 }
+    #tree .file-as { background-position: -36px 0 }
+    #tree .file-c { background-position: -72px -0px }
+    #tree .file-iso { background-position: -108px -0px }
+    #tree .file-htm, #tree .file-html, #tree .file-xml, #tree .file-xsl { background-position: -126px -0px }
+    #tree .file-cf { background-position: -162px -0px }
+    #tree .file-cpp { background-position: -216px -0px }
+    #tree .file-cs { background-position: -236px -0px }
+    #tree .file-sql { background-position: -272px -0px }
+    #tree .file-xls, #tree .file-xlsx { background-position: -362px -0px }
+    #tree .file-h { background-position: -488px -0px }
+    #tree .file-crt, #tree .file-pem, #tree .file-cer { background-position: -452px -18px }
+    #tree .file-php { background-position: -108px -18px }
+    #tree .file-jpg, #tree .file-jpeg, #tree .file-png, #tree .file-gif, #tree .file-bmp { background-position: -126px
+    -18px }
+    #tree .file-ppt, #tree .file-pptx { background-position: -144px -18px }
+    #tree .file-rb { background-position: -180px -18px }
+    #tree .file-text, #tree .file-txt, #tree .file-md, #tree .file-log, #tree .file-htaccess { background-position:
+    -254px -18px }
+    #tree .file-doc, #tree .file-docx { background-position: -362px -18px }
+    #tree .file-zip, #tree .file-gz, #tree .file-tar, #tree .file-rar { background-position: -416px -18px }
+    #tree .file-js { background-position: -434px -18px }
+    #tree .file-css { background-position: -144px -0px }
+    #tree .file-fla { background-position: -398px -0px }
+
+    fieldset {
+    border: 0;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% if error %}<p class="error"><strong>Error:</strong> {{ error }}{% endif %}
+
+<div>Task ID: {{ task.get_str_id() }}</div>
+
+<p></p>
+
+<div>
+    <h2>Upload file</h2>
+
+    <form action="{{ url_for('upload_file', task_id=task.get_str_id()) }}" method="post" enctype="multipart/form-data">
+        <p>
+            <label for="filename"> Destination Path:
+                <input id="filename" name="filename">
+            </label>
+            <input type="file" name="file">
+            <input type="submit" value="Upload">
+    </form>
+</div>
+
+<div>
+    <h2>Execute ArvidaPP</h2>
+
+    <p></p>
+
+    <form action="{{ url_for('preprocess', task_id=task.get_str_id()) }}" method="get">
+        <fieldset>
+
+            <table cellpadding="2" cellspacing="0" border="0" width="430">
+                <tr>
+                    <td width="120">Input file:</td>
+                    <td colspan="3"><input class="left" type="text" name="input_file" id="input_file" style="width: 300px;"></td>
+                </tr>
+                <tr>
+                    <td>Output file:</td>
+                    <td colspan="3"><input class="left" type="text" name="output_file" id="output_file" value="Output.cpp" style="width: 300px;"></td>
+                </tr>
+                <tr>
+                    <td>Select template backend:</td>
+                    <td>
+                        <select name="template" id="template">
+                            {% for item in task.template_backends %}
+                            <option>{{item}}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+            </table>
+
+            <input type="submit" value="Preprocess" id="preprocess">
+        </fieldset>
+    </form>
+    {% if task.preprocess_result %}
+    <h3>Command line</h3>
+
+    <div id="cmdln">
+<pre>
+{{ task.commandline }}
+</pre>
+    </div>
+    <h3>stdout</h3>
+
+    <div id="stdout">
+<pre>
+{{ task.preprocess_result[1] }}
+</pre>
+    </div>
+
+    <h3>stderr</h3>
+
+    <div id="stderr">
+<pre>
+{{ task.preprocess_result[2] }}
+</pre>
+    </div>
+    {% endif %}
+
+</div>
+
+<p></p>
+
+<div>
+    <h2>Uploaded files</h2>
+
+    <p></p>
+
+
+    <div id="container" role="main">
+        <div id="tree">
+        </div>
+        <div id="data">
+            <!--<div class="content code" style="display:none;"><textarea id="code" readonly="readonly"></textarea></div>-->
+            <div class="content code" style="display:none;">
+                <pre><code id="code"></code></pre>
+            </div>
+            <div class="content image" style="display:none; position:relative;">
+                <img src="" alt=""
+                     style="display:block; position:absolute; left:50%; top:50%; padding:0; max-height:90%; max-width:90%;"/>
+            </div>
+            <div class="content default" style="text-align:center;">Select a file from the tree.</div>
+        </div>
+    </div>
+</div>
+
+<p></p>
+
+<script>
+    var arvidapp = {
+        "static" : "{{ url_for('static', filename='.') }}",
+        "jstree" : "{{ url_for('jstree', task_id=task.get_str_id()) }}"
+    };
+
+
+
+
+</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="{{ url_for('static', filename='prism/prism.js') }}"></script>
+<script src="{{ url_for('static', filename='jstree/jstree.js') }}"></script>
+<script src="{{ url_for('static', filename='show_task.js') }}"></script>
+
+{% endblock %}
