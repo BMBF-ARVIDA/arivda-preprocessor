@@ -17,6 +17,7 @@
 import arvidapp
 import itertools
 import jinja2
+from collections import OrderedDict
 
 
 def enum(**enums):
@@ -677,7 +678,7 @@ class TemplateProcessor(object):
             id_gen = itertools.count()
 
             cls.blank_id = 0
-            cls.blanks = {}
+            cls.blanks = OrderedDict()
 
             def create_blank(elem, id_gen):
                 blank_data = cls.blanks.get(elem, None)
