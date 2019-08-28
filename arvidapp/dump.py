@@ -14,9 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import arvidapp
 import clang
-import asciitree
+from . import asciitree
 
 
 class PrintText(object):
@@ -216,7 +219,7 @@ class PrintType(object):
                           max_depth=self.max_depth,
                           depth=self.depth + 1))
         if self.type.get_num_template_arguments():
-            for i in xrange(self.type.get_num_template_arguments()):
+            for i in range(self.type.get_num_template_arguments()):
                 children.append(PrintType('.get_template_argument({})'.format(i),
                                           self.type.get_template_argument_type(i),
                                           cursor_filter=self.cursor_filter,

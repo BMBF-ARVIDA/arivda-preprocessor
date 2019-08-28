@@ -26,10 +26,12 @@
 
 from __future__ import print_function
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from future import standard_library
+
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
+from io import StringIO
 
 
 def draw_tree(node,
@@ -69,7 +71,7 @@ def _draw_tree(node, prefix, last_node, child_iter, text_str):
         buf.write('\n')
 
     for index, child in enumerate(children):
-        if index+1 == len(children):
+        if index + 1 == len(children):
             sub_prefix = prefix + '   '
             last_node = True
         else:
@@ -91,6 +93,7 @@ if __name__ == '__main__':
 
         def __str__(self):
             return self.name
+
 
     root = Node('root', [
         Node('sub1', []),

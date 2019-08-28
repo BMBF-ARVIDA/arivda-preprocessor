@@ -15,9 +15,15 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
+from builtins import object
 import clang.cindex
 import ctypes
-import ConfigParser
+import configparser
 import os.path
 import json
 import itertools
@@ -169,9 +175,9 @@ TOKEN_SCANNER = re.compile(r'''
 ''', re.DOTALL | re.VERBOSE)
 
 
-def tokenize_type_spelling(str):
+def tokenize_type_spelling(type_str):
     res = []
-    for match in re.finditer(TOKEN_SCANNER, str):
+    for match in re.finditer(TOKEN_SCANNER, type_str):
         space, hexnum, intnum, punct, rest = match.groups()
         if space:
             continue
@@ -214,8 +220,8 @@ class TypeSpellingInfo(object):
                 [repr(i) for i in self.template_arguments]) + ']' if self.template_arguments is not None else None)
 
 
-def analyze_type_spelling(str):
-    tokens = tokenize_type_spelling(str)
+def analyze_type_spelling(type_str):
+    tokens = tokenize_type_spelling(type_str)
     if not tokens:
         return None
 
@@ -243,7 +249,7 @@ def analyze_type_spelling(str):
         else:
             assert tsi is not None
             token = tokens[i]
-            if isinstance(token, int) or isinstance(token, unicode):
+            if isinstance(token, int) or isinstance(token, str):
                 tsi_arg = token
             else:
                 tsi_arg = TypeSpellingInfo(token)
@@ -495,7 +501,7 @@ def get_full_specialized_name(cursor, include_default_template_args=False):
         # by libclang API
         tsi = analyze_type_spelling(cursor.type.spelling)
         targs = []
-        for i in xrange(cursor.type.get_num_template_arguments()):
+        for i in range(cursor.type.get_num_template_arguments()):
             # FIXME Current libclang API does not provide information about default arguments
             # Use parsed information
             if not include_default_template_args and i >= len(tsi.template_arguments):
@@ -727,7 +733,7 @@ class CursorWrapper(object):
 
 
 def build_translation_unit(config_file_name, compiler_command_line, libpath='', resource_dir=''):
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.add_section('Main')
     config.set('Main', 'libpath', libpath)
     config.set('Main', 'resource-dir', resource_dir)
@@ -1481,17 +1487,17 @@ class Environment(object):
             self.extend_annotations(build_annotations(c))
 
     def dump(self):
-        import asciitree
+        from . import asciitree
 
         def dump_node_children(node):
             children = []
 
             if isinstance(node, Environment):
-                children.extend(node.global_annotations.iteritems())
+                children.extend(iter(node.global_annotations.items()))
                 children.extend(node.classes)
                 return children
             if isinstance(node, Annotatable):
-                children.extend(node.annotations.items())
+                children.extend(list(node.annotations.items()))
             if isinstance(node, Class):
                 children.extend(node.template_params)
                 children.extend(node.members)

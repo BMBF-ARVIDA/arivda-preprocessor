@@ -172,7 +172,7 @@ def main():
     elif config_log_file:
         args.log_file = config_log_file
 
-    if not args.log_to_console and not config.has_key('LOG_FILE'):
+    if not args.log_to_console and 'LOG_FILE' not in config:
         config['LOG_FILE'] = args.log_file = DEFAULT_LOG_FILE
 
     if not args.log_to_console:

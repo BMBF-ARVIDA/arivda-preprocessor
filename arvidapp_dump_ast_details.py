@@ -33,32 +33,32 @@ source_files = []
 invocation_dir = None
 
 
-def debug(s):
+def debug(msg):
     global args
     if args.verbose:
-        sys.stderr.write(s + "\n")
+        sys.stderr.write(msg + "\n")
 
 
-def warn(s):
-    sys.stderr.write("%s: Warning: %s\n" % (os.path.basename(sys.argv[0]), s))
+def warn(msg):
+    sys.stderr.write("%s: Warning: %s\n" % (os.path.basename(sys.argv[0]), msg))
 
 
-def error(s):
-    sys.stderr.write("%s: Error: %s\n" % (os.path.basename(sys.argv[0]), s))
+def error(msg):
+    sys.stderr.write("%s: Error: %s\n" % (os.path.basename(sys.argv[0]), msg))
     sys.exit(1)
 
 
-def should_process_file(f, source_files):
+def should_process_file(filename, source_files):
     global args
 
     def is_system_header():
-        return (os.path.isabs(f.name) and
-                os.path.relpath(f.name, invocation_dir).startswith(".."))
+        return (os.path.isabs(filename.name) and
+                os.path.relpath(filename.name, invocation_dir).startswith(".."))
 
-    return (f and
+    return (filename and
             (args.all_headers or
              (args.non_system_headers and not is_system_header()) or
-             os.path.realpath(f.name) in source_files))
+             os.path.realpath(filename.name) in source_files))
 
 
 def main():
@@ -97,32 +97,38 @@ def main():
 
     tool_dir = os.path.dirname(os.path.realpath(__file__))
 
-    fn = os.path.join(tool_dir, 'arvidapp.cfg')
+    config_filename = os.path.join(tool_dir, 'arvidapp.cfg')
 
     try:
         start = time.time()
-        tu = arvidapp.build_translation_unit(fn, args.compiler_command_line)
+        trans_unit = arvidapp.build_translation_unit(config_filename, args.compiler_command_line)
         debug("  clang parse took %.2fs" % (time.time() - start))
-    except Exception as e:
+    except Exception as exc:
         debug(traceback.format_exc())
-        error("Clang failed to parse '%s': %s" % (" ".join(args.compiler_command_line), e))
+        error("Clang failed to parse '%s': %s" % (" ".join(args.compiler_command_line), exc))
 
-    errors = [d for d in tu.diagnostics
-              if d.severity in (clang.cindex.Diagnostic.Error, clang.cindex.Diagnostic.Fatal)]
+    errors = [diag_err for diag_err in trans_unit.diagnostics
+              if diag_err.severity in (clang.cindex.Diagnostic.Error, clang.cindex.Diagnostic.Fatal)]
 
-    if len(errors) > 0:
-        for d in errors:
+    if errors:
+        for diag_err in errors:
             sys.stderr.write('%s:%i:%i: error: %s' %
-                             (d.location.file, d.location.line, d.location.column, d.spelling))
+                             (diag_err.location.file,
+                              diag_err.location.line,
+                              diag_err.location.column,
+                              diag_err.spelling))
             sys.stderr.write('\n')
-        error("File '%s' failed clang's parsing and type-checking" % tu.spelling)
+        error("File '%s' failed clang's parsing and type-checking" % trans_unit.spelling)
 
     if args.output == "-":
         out = sys.stdout
     else:
         out = open(args.output, "wb")
 
-    out.write(arvidapp.dump.dump_ast(tu, lambda cursor: should_process_file(cursor.location.file, source_files)))
+    out.write(
+        arvidapp.dump.dump_ast(
+            trans_unit,
+            lambda cursor: should_process_file(cursor.location.file, source_files)))
     out.flush()
 
     if out is not sys.stdout:

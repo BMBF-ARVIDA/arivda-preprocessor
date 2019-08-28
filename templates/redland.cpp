@@ -130,7 +130,7 @@ inline NodeRef toRDF(const Context &ctx, NodeRef _this, const {{ c.full_name }} 
     {% for it in c.annotated_base_classes %}
     {{ make_toRDF_call(it) }}
     {% endfor %}
-    {% for it in c.blanks.itervalues() -%}
+    {% for it in c.blanks.values() -%}
         {{ define_blank_node(it)|indent(4, True) }}
     {% endfor %}
     {% for it in c.mtcs -%}
@@ -301,7 +301,7 @@ inline bool fromRDF(const Context &ctx, const NodeRef _this0, {{ c.full_name }} 
     {{ make_fromRDF_call(it) }}
     {% endfor %}
 
-    {% for it in c.blanks.itervalues() %}
+    {% for it in c.blanks.values() %}
     Redland::Node {{ it.var_name }};
     {% endfor %}
 

@@ -14,6 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from past.builtins import cmp
+from builtins import next
+from builtins import object
 import arvidapp
 import itertools
 import jinja2
@@ -151,6 +154,34 @@ def process_path_annotation(path_annotation_list, path_subst_list=DEFAULT_PATH_S
                     pp_path = value
 
     return path, unquoted_path, pp_path
+
+
+def cmp_to_key(mycmp):
+    'Convert a cmp= function into a key= function'
+
+    class K:
+        def __init__(self, obj, *args):
+            self.obj = obj
+
+        def __lt__(self, other):
+            return mycmp(self.obj, other.obj) < 0
+
+        def __gt__(self, other):
+            return mycmp(self.obj, other.obj) > 0
+
+        def __eq__(self, other):
+            return mycmp(self.obj, other.obj) == 0
+
+        def __le__(self, other):
+            return mycmp(self.obj, other.obj) <= 0
+
+        def __ge__(self, other):
+            return mycmp(self.obj, other.obj) >= 0
+
+        def __ne__(self, other):
+            return mycmp(self.obj, other.obj) != 0
+
+    return K
 
 
 class MemberTripleContainer(TemplateObject):
@@ -297,7 +328,7 @@ class MemberTripleContainer(TemplateObject):
             y_value = node_value(y.subject) + node_value(y.predicate) + node_value(y.object)
             return cmp(x_value, y_value)
 
-        triples = sorted(self.triples, cmp=cmp_triple)
+        triples = sorted(self.triples, key=cmp_to_key(cmp_triple))
 
         for triple in triples:
             has_element_ref = False
@@ -686,25 +717,25 @@ class TemplateProcessor(object):
                     blank_data = BlankData(elem, "_b%d" % (cls.blank_id,))
                     cls.blanks[elem] = blank_data
                     cls.blank_id += 1
-                return Blank(blank_data, id=id_gen.next())
+                return Blank(blank_data, id=next(id_gen))
 
             def create_triple(triple, member=None):
-                new_triple = Triple(id=id_gen.next())
+                new_triple = Triple(id=next(id_gen))
                 for index, elem in enumerate(triple):
                     if elem.startswith("_:"):
                         new_triple[index] = create_blank(elem, id_gen=id_gen)
                     elif elem == "$this":
-                        new_triple[index] = Value(cls, parent=None, meta_var=elem, id=id_gen.next())
+                        new_triple[index] = Value(cls, parent=None, meta_var=elem, id=next(id_gen))
                     elif elem == '$that' or elem in THAT_ELEMENT_NAMES:
                         if member is None:
                             raise Exception('Per class triple annotation cannot refer to %s' % elem)
                         else:
-                            value = Value(member, parent=cls, meta_var=elem, id=id_gen.next())
+                            value = Value(member, parent=cls, meta_var=elem, id=next(id_gen))
                             new_triple[index] = value
                     elif "://" in elem:
-                        new_triple[index] = IRI(elem, id=id_gen.next())
+                        new_triple[index] = IRI(elem, id=next(id_gen))
                     elif ":" in elem:
-                        new_triple[index] = PrefixedName(elem, id=id_gen.next())
+                        new_triple[index] = PrefixedName(elem, id=next(id_gen))
                     else:
                         raise Exception('Unknown element in triple annotation: %s' % elem)
                 return new_triple
@@ -714,7 +745,7 @@ class TemplateProcessor(object):
 
             global_triple_annotations = cls.annotations.get('triple', [])
             if global_triple_annotations:
-                global_mtc = MemberTripleContainer(member=None, class_=cls, id=id_gen.next())
+                global_mtc = MemberTripleContainer(member=None, class_=cls, id=next(id_gen))
                 all_mtcs.append(global_mtc)
                 for triple_anno in global_triple_annotations:
                     global_mtc.triples.append(create_triple(triple_anno))
@@ -722,7 +753,7 @@ class TemplateProcessor(object):
             for member in cls.members:
                 triple_annotations = member.annotations.get('triple', None)
                 if triple_annotations:
-                    mtc = MemberTripleContainer(member=member, class_=cls, id=id_gen.next())
+                    mtc = MemberTripleContainer(member=member, class_=cls, id=next(id_gen))
                     all_mtcs.append(mtc)
                     for triple_anno in triple_annotations:
                         mtc.triples.append(create_triple(triple_anno, member))

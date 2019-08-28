@@ -30,6 +30,13 @@
 """
 
 from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
+from builtins import object
 import os
 import os.path
 import shutil
@@ -40,7 +47,7 @@ import json
 from flask import Flask, request, Response, abort, jsonify, render_template, flash, redirect, url_for, \
     send_from_directory, current_app
 from flask.json import JSONEncoder
-from flask_reverse_proxy import ReverseProxied
+from .flask_reverse_proxy import ReverseProxied
 from werkzeug.utils import secure_filename
 import mimetypes
 import logging
@@ -192,7 +199,7 @@ class Task(object):
                 shutil.copyfile(src_path, dest_path)
 
         self.update_files()
-        self.time = datetime.datetime.fromtimestamp((self.guid.time - 0x01b21dd213814000) * 100 / 1e9)
+        self.time = datetime.datetime.fromtimestamp(old_div((self.guid.time - 0x01b21dd213814000) * 100, 1e9))
         self.preprocess_result = None
         self.commandline = None
 
@@ -355,7 +362,7 @@ class CustomJSONEncoder(JSONEncoder):
         if isinstance(obj, FileEntry):
             return obj.to_json()
         if isinstance(obj, Task):
-            return {'guid': obj.guid, 'files': obj.files.keys(), 'time': obj.time}
+            return {'guid': obj.guid, 'files': list(obj.files.keys()), 'time': obj.time}
         try:
             iterable = iter(obj)
         except TypeError:
@@ -656,10 +663,7 @@ def create_app(config=None, init_logger=None):
     @app.route("/api/debug/flask/", methods=["GET"])
     def debug_flask():
         import pprint
-        try:
-            from urllib import unquote
-        except ImportError:
-            from urllib.parse import unquote
+        from urllib.parse import unquote
 
         output = ['Rules:']
         for rule in current_app.url_map.iter_rules():
@@ -712,12 +716,12 @@ if __name__ == "__main__":
     app.logger.info('Starting ARVIDAPP')
 
     app.logger.info('Environment:')
-    for k, v in os.environ.iteritems():
+    for k, v in os.environ.items():
         app.logger.info('%s = %r' % (k, v))
     app.logger.info('Configuration:')
-    for k, v in app.config.iteritems():
+    for k, v in app.config.items():
         app.logger.info('%s = %r' % (k, v))
-    msg = 'app path: "%s"' % (app.instance_path)
+    msg = 'app path: "%s"' % (app.instance_path,)
     app.logger.info(msg)
 
     app.run(debug=debug,
