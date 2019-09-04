@@ -1,0 +1,9 @@
+.git
+.gitignore
+docker-build*.sh
+docker-run*.sh
+Dockerfile*
+**/*~
+**/*.pyc
+instance
+docs

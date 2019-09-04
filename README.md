@@ -2,6 +2,10 @@
 
 The ARVIDA C++ preprocessor (ARVIDAPP) is a tool for generating RDF parsing and serialization code from C++ declarations. It uses source code annotations to describe the data types to be serialized. The annotations are read with Clang Python bindings and the source code is generated with Jinja2 templates. This repository contains command line tools for code analysis and generation as well as a simple web server for providing ARVIDAPP as a web service.
 
+## Documentation
+
+See [here](docs/ARVIDAPP.md).
+
 ## Installation
 
 To use ARVIDAPP you need to have libclang with Python bindings, ARVIDAPP supports Python 2.7 and 3.x. Install python requirements by using pip with `requirements.txt` and `web-requirements.txt` for web server:
